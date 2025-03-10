@@ -1,17 +1,39 @@
+import {Alert, StyleSheet, Text, View, TextInput, Image, ScrollView, TouchableOpacity, Linking, Dimensions } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { useFonts } from 'expo-font';
+import theme from './theme';
 
-import { StyleSheet, Text, View,TextInput,Image,ScrollView,TouchableOpacity,Linking } from 'react-native';
 
-import React,{useState} from 'react';
-import { useEffect } from 'react';
-import { useRef } from 'react';
+const screenWidth = Dimensions.get('window').width;
+const componentWidth = screenWidth * 0.9;
 
 export default function App() {
-
   const [searchTerm, setSearchTerm] = useState("");
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const scrollViewRef = useRef(null);
+
+  const [fontsLoaded] = useFonts({
+    'akad': require('./assets/fonts/akademik.ttf'),
+    "Oxygen": require('./assets/fonts/Oxygen-Regular.ttf'),
+    "Oxygen-Bold": require('./assets/fonts/Oxygen-Bold.ttf'),
+  });
+
+
+  const profileIcons = {
+    orcid: '',
+    yokakademik: '',
+    trdizin: '',
+    googlescholar: '',
+    researchgate: '',
+    researcherid: '',
+    scopusid: '',
+  };
+
+  if (!fontsLoaded) {
+    
+  }
 
   const scrollToTop = () => {
     scrollViewRef.current?.scrollTo({ y: 0, animated: true });
@@ -37,132 +59,143 @@ export default function App() {
 
   const renderProfileButtons = (profiles) => {
     if (!profiles || profiles.length === 0) {
-      return null; 
+      return null;
     }
-  
-    return profiles.map((profile, index) => (
-      <TouchableOpacity
+    return profiles.map((profile, index) => {
+      const icon = profileIcons[profile.profil.toLowerCase()] || '❓';
+      return (
+        <TouchableOpacity
         key={index}
         style={styles.profileButton}
-        onPress={() => Linking.openURL(profile.link)}
+        onPress={() => {
+          if (profile.link && profile.link.trim() !== '') {
+            Linking.openURL(profile.link);
+          } else {
+            Alert.alert('Hata', 'Profil bulunamadı'); 
+          }
+        }}
       >
-        <Text style={styles.profileButtonText}>{profile.profil_isim}</Text>
+        <View style={{ flexDirection: "row-reverse", justifyContent: "space-between" }}>
+          <Text style={styles.profileButtonText}>{icon}</Text>
+        </View>
       </TouchableOpacity>
-    ));
+      );
+    });
   };
-  
+
   const Card = ({ item }) => (
     <View style={styles.card}>
       <Text style={styles.title}>
         {item.isim} {item.soyisim ? item.soyisim : ""}
       </Text>
       {item.unvan ? (
-        <Text style={{ fontSize: 12, color: "gray" }}>{item.unvan}</Text>
+        <Text style={{ fontSize: 14, color: "gray" , fontFamily:"Oxygen", }}>{item.unvan}</Text>
       ) : null}
       <View style={styles.divider} />
       {item.birim_adi ? (
-        <Text style={styles.department} numberOfLines={1} ellipsizeMode="tail">Birim: <Text style={{color:"#4e73df"}} >{item.birim_adi}</Text></Text>
+        <Text style={styles.department} onPress={() => Linking.openURL(`https://${item.subdomain}.usak.edu.tr`)}>
+          Birim: <Text style={{ color: "#3D7FBF" }}>{item.birim_adi}</Text>
+        </Text>
       ) : null}
       <View style={styles.divider} />
       {item.dahili ? (
         <Text style={styles.phone} onPress={() => Linking.openURL(`tel:${item.dahili}`)}>
-          Dahili: <Text style={{color:"#4e73df"}} >{item.dahili}</Text>
+          Dahili: <Text style={{ color: "#3D7FBF" }}>{item.dahili}</Text>
         </Text>
       ) : null}
       <View style={styles.divider} />
       <View style={styles.profileButtonsContainer}>
-        {renderProfileButtons(item.profiller)}
+        {item.profiller && item.profiller.length > 0 ? renderProfileButtons(item.profiller) : null}
+        {item.profiller && item.profiller.length > 0 ? (
+          <TouchableOpacity style={{ alignItems: "center", justifyContent: "center" }} onPress={() => Linking.openURL(`https://avesis.usak.edu.tr/${item.kullanici_adi}`)}>
+            
+            <Text style={styles.profileButtonText}></Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     </View>
   );
-  
 
-  
   return (
     <View style={styles.container}>
       <ScrollView ref={scrollViewRef} style={styles.resultsScroll} contentContainerStyle={{ alignItems: 'center' }}>
-      
-    
-      <View style={styles.AramaKutusu}>
-
-      <View style={styles.header}>
-        <Image style={styles.ImageStyle} source={{uri:"https://www.usak.edu.tr/Images/logolarimiz/yeni_2.png"}}></Image>
-        <Text style={styles.BaslikText}>Uşak Üniversitesi Telefon Rehberi</Text>
-      </View>
-
-         <TextInput style={[styles.input, isFocused && styles.inputFocused]}
-         placeholder="Arama yapmak için en az 3 harf yazınız."
-         value={searchTerm}
-         onChangeText={setSearchTerm}
-         onFocus={() => setIsFocused(true)}
-         onBlur={() => setIsFocused(false)} >
-         </TextInput>
-
-         <Text style={styles.DuzText}>Not: Arama için kişi adı, soyadı, birim adı veya dahili giriniz.</Text>
-      </View>
-
-      <View style={styles.AramaSonuc}>
-  {loading ? (
-    <Text style={styles.DuzText2}>Yükleniyor...</Text>
-  ) : data.length > 0 ? (
-    <View>
-      {data.map((item, index) => (
-        <Card key={index} item={item} />
-      ))}
-    </View>
-  ) : (
-    <Text style={styles.DuzText2}>
-      {searchTerm.length >= 3 ? <Text style={{ color: 'red' }}>Sonuç bulunamadı.</Text> : 'Arama yapmak için yukarıya en az 3 harf yazınız.'}
-    </Text>
-  )}
-</View>
-      
-      <Text style={styles.BottomText}>© 2025 Uşak Üniversitesi - Tüm Hakları Saklıdır</Text>
-      <Text style={{width:'90%',paddingTop:0,fontSize:11,color:'white',textAlign:'center',padding:5,}}>Bilgi İşlem Daire Başkanlığı</Text>
+        <View style={styles.AramaKutusu}>
+          <View style={styles.header}>
+            <Text style={styles.BaslikText}><Text style={{fontFamily:"akad"}}></Text> Uşak Üniversitesi Telefon Rehberi</Text>
+          </View>
+          <TextInput
+            style={[styles.input, isFocused && styles.inputFocused]}
+            placeholder="Arama yapmak için en az 3 harf yazınız."
+            value={searchTerm}
+            onChangeText={setSearchTerm}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+          />
+          <Text style={styles.DuzText}>Not: Arama için kişi adı, soyadı, birim adı veya dahili giriniz.</Text>
+        </View>
+        <View style={styles.AramaSonuc}>
+          {loading ? (
+            <View style={styles.messageContainer}>
+              <Text style={styles.DuzText2}>Yükleniyor...</Text>
+            </View>
+          ) : data.length > 0 ? (
+            <View>
+              {data.map((item, index) => (
+                <Card key={index} item={item} />
+              ))}
+            </View>
+          ) : (
+            <View style={styles.messageContainer}>
+              <Text style={styles.DuzText2}>
+                {searchTerm.length >= 3 ? 
+                  <Text style={styles.noResultsText}>Sonuç bulunamadı.</Text> : 
+                  'Arama yapmak için yukarıya en az 3 harf yazınız.'
+                }
+              </Text>
+            </View>
+          )}
+        </View>
+        <Text style={styles.BottomText}>© 2025 Uşak Üniversitesi - Tüm Hakları Saklıdır</Text>
+        <Text style={{ width: '90%', paddingTop: 0, color: 'white', textAlign: 'center', padding: 5,fontFamily:"Oxygen", }}>
+          Bilgi İşlem Daire Başkanlığı
+        </Text>
       </ScrollView>
-
       <TouchableOpacity style={styles.scrollTopButton} onPress={scrollToTop}>
-        <Text style={styles.scrollTopText}>^</Text>
+        <Text style={styles.scrollTopText}>ᐃ</Text>
       </TouchableOpacity>
     </View>
-    
   );
 }
 
 const styles = StyleSheet.create({
-  container:{
-    backgroundColor:'#234475',
-    flex:1,
-    flexDirection:'column',
-    alignItems:'center',
+  container: {
+    backgroundColor: theme.colors.koyuMavi,
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
   },
-  AramaKutusu:{
-    width:'90%',
-    height:250,
-    backgroundColor:'#fff',
-    borderRadius:10,
-    marginTop:50,
-    padding:20,
-    alignItems:'center',
-    justifyContent:'center',
+  AramaKutusu: {
+    width: componentWidth,
+    height: 250,
+    backgroundColor: theme.colors.beyaz,
+    borderRadius: 10,
+    marginTop: 50,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  header:{
-    paddingRight:10,
-    display:'flex',
-    flexDirection:'row',
+  header: {
+    paddingRight: 10,
+    display: 'flex',
+    flexDirection: 'row',
   },
-  ImageStyle:{
-    marginTop:5,
-    width:20,
-    height:20,
+  BaslikText: {
+    textAlign: 'center',
+    fontFamily: 'Oxygen',
+    fontSize: 20,
+    color: theme.colors.koyuMavi,
   },
-  BaslikText:{
-    textAlign:'center',
-    fontSize:16,
-    fontWeight:'300',
-    color:'#234475',
-  },
-  input:{
+  input: {
     width: '100%',
     height: 70,
     borderColor: 'black',
@@ -170,9 +203,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginTop: 20,
     padding: 10,
-    fontSize: 10,
+    fontSize: 14,
     textAlign: 'center',
-    backgroundColor: 'white',
+    fontFamily:"Oxygen",
+    backgroundColor: theme.colors.beyaz,
   },
   inputFocused: {
     borderColor: 'lightblue',
@@ -183,81 +217,96 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 10,
   },
-  DuzText:{
-    fontSize:10,
-    color:'grey',
-    marginTop:20,
-    textAlign:'center',
+  DuzText: {
+    fontSize: 14,
+    color: theme.colors.koyuGri,
+    marginTop: 20,
+    textAlign: 'center',
+    fontFamily:"Oxygen",
   },
-  AramaSonuc:{
-
-    width:'90%',
-    alignItems:'center',
-    justifyContent:'center',
+  AramaSonuc: {
+    width: '100%',
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  DuzText2:{
-    marginTop:20,
-    width:'95%',
-    height:60,
-    backgroundColor:'#fff',
-    borderRadius:10,
-    paddingTop:20,
-    fontSize:10,
-    color:'grey',
-    textAlign:'center',
-    alignItems:'center',
-    justifyContent:'center',
-  },
-  BottomText:{
-    width:'90%',
-    paddingTop:20,
-    fontSize:11,
-    color:'white',
-    textAlign:'center',
+  messageContainer: {
+    marginTop:10,
+    width: '90%',
+    height: 80,
+    backgroundColor: theme.colors.beyaz,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
     padding:10,
   },
+  DuzText2: {
+    fontSize: 14,
+    color: theme.colors.koyuGri,
+    textAlign: 'center',
+    fontFamily:"Oxygen",
+  },
+  noResultsText: {
+    color: theme.colors.acikKirmizi,
+    fontFamily:"Oxygen",
+  },
+  BottomText: {
+    width: '90%',
+    paddingTop: 20,
+    fontSize: 14,
+    color: theme.colors.beyaz,
+    textAlign: 'center',
+    padding: 10,
+    fontFamily:"Oxygen",
+  },
   card: {
-    width: '100%',
-    backgroundColor: '#fff',
-    padding: 20,
+    width: componentWidth,
+    height: 'auto',
+    backgroundColor: theme.colors.beyaz,
+    padding: 10,
     margin: 10,
     borderRadius: 10,
   },
   title: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: 'gray',
+    fontFamily:"Oxygen-Bold",
+    color: theme.colors.koyuGri,
   },
   department: {
     fontSize: 14,
-    color: 'gray',
+    color: theme.colors.koyuGri,
+    fontFamily:"Oxygen",
   },
   phone: {
     fontSize: 14,
-    color: 'gray',
+    color: theme.colors.koyuGri,
+    fontFamily:"Oxygen",
   },
   profileButtonsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: "flex-end",
+    alignItems: 'center',
+    textAlign: 'center',
+    gap: 5,
   },
   profileButton: {
-    backgroundColor: '#234475',
     padding: 5,
-    margin: 5,
-    borderRadius: 5,
+    margin: 1,
   },
   profileButtonText: {
-    color: '#fff',
+    color: theme.colors.acikMavi,
+    fontFamily: "akad",
+    fontSize: 16,
   },
   resultsScroll: {
     width: '100%',
     height: '100%',
-    
   },
   divider: {
     height: 1.5,
-    backgroundColor: 'lightgray', 
-    width: 280,
+    backgroundColor: theme.colors.acikGri,
+    width: "100%",
     marginVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -267,7 +316,6 @@ const styles = StyleSheet.create({
     bottom: 20,
     right: 10,
     backgroundColor: "rgba(0, 0, 0, 0.3)",
-    padding: 10,
     borderRadius: 10,
     width: 55,
     height: 55,
@@ -275,10 +323,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scrollTopText: {
-    color: 'white',
+    color: theme.colors.beyaz,
     fontSize: 28,
-    fontWeight: '500',
+    fontWeight: '400',
+    textAlign: 'center',
   },
 });
-
-
